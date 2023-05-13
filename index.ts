@@ -2,7 +2,62 @@ import * as L from "leaflet";
 import 'leaflet/dist/leaflet.css';
 import 'leaflet-sidebar-v2';
 import "./css/leaflet-sidebar.css";
-import "./css/leaflet-sidebar.min.css";
+import '@geoman-io/leaflet-geoman-free';
+import '@geoman-io/leaflet-geoman-free/dist/leaflet-geoman.css';
+
+export type MapSDKOptions = {
+    map: {
+        coordinates: any;
+        defaultZoom: number;
+        onMapClick?: () => void;
+    };
+    tile: {
+        url: string;
+        attribution: string;
+    };
+    clusterMarkers?: ILayer[];
+    markers?: ILayer[];
+    lines?: ILayer[];
+    circles?: ILayer[];
+    polygons?: ILayer[];
+    routes?: ILayer[];
+};
+
+interface ILayer {
+    type: string,
+    features: [
+        {
+            type: string,
+            properties: {},
+            geometry: {
+                coordinates: [],
+                type: string
+            }
+        }
+    ]
+}
+
+
+
+interface IOptions {
+    map: {
+        coordinates: {
+            latitude: number;
+            longitude: number;
+        }
+    };
+}
+
+interface IProject {
+    Id: string;
+    Name: string;
+}
+
+interface ILayer {
+    id: string;
+    name: string;
+    data_type: string;
+}
 
 export class MapSDK {
     private container: HTMLElement;
@@ -13,13 +68,13 @@ export class MapSDK {
     private markerLayerGroup: L.LayerGroup;
     private polygonLayerGroup: L.LayerGroup;
 
-    private baseLayers: { [name: string]: any };
+    private baseLayers: { [name: string]: L.TileLayer };
 
     private sidebar: L.Control.Sidebar;
 
 
 
-    constructor(container: any) {
+    constructor(container: HTMLElement) {
         this.container = container;
         this.map = L.map(this.container, { zoomControl: false });
         // Initialize layer groups here
@@ -34,14 +89,18 @@ export class MapSDK {
             closeButton: true,
             container: 'sidebar',
             position: 'left',
-        }).addTo(this.map)
+        }).addTo(this.map);
+
+        this.map.pm.addControls({
+            position: 'topright',
+        });
 
         this.renderOptions()
             .then(options => {
                 this.sidebar
                     .addPanel({
                         id: 'js-api',
-                        tab: '<i class="fa fa-gear"></i>',
+                        tab: '<div class="icon-tt"></div>',
                         title: 'Layers',
                         pane: options
                     });
@@ -50,7 +109,7 @@ export class MapSDK {
 
     }
 
-    init(options: any): void {
+    init(options: IOptions): void {
         this.options = { ...options };
 
         this.map.setView([options.map.coordinates.latitude, options.map.coordinates.longitude], 1);
@@ -73,7 +132,7 @@ export class MapSDK {
 
 
 
-    async renderOptions(): Promise<any> {
+    async renderOptions(): Promise<string> {
         const projects = await this.fetchProjects();
 
         const projectOptions = projects.map((project) => `<option value="${project.Id}">${project.Name}</option>`).join('');
@@ -95,7 +154,7 @@ export class MapSDK {
     }
 
 
-    async fetchProjects(): Promise<{ Id: string, Name: string }[]> {
+    async fetchProjects(): Promise<IProject[]> {
         const response = await fetch('http://localhost:7020/projects');
         if (!response.ok) {
             throw new Error(`HTTP error! status: ${response.status}`);
@@ -104,7 +163,7 @@ export class MapSDK {
         return projects;
     }
 
-    async fetchLayers(url: string): Promise<string[]> {
+    async fetchLayers(url: string): Promise<ILayer[]> {
         const response = await fetch(url);
         if (!response.ok) {
             throw new Error(`HTTP error! status: ${response.status}`);
@@ -146,7 +205,7 @@ export class MapSDK {
             throw new Error(`HTTP error! status: ${response.status}`);
         }
         const markers = await response.json() as any[];
-        this.setMarkers(markers);
+        this.setCircle(markers);
         // this.sidebar.setContent('Polygons fetched and set.'); // Displaying a message in the sidebar
     }
 
@@ -179,6 +238,28 @@ export class MapSDK {
     }
 
     // Symbology LAyers
+    setCircle(markers: any[]): void {
+        this.polygonLayerGroup.clearLayers();
+        this.markerLayerGroup.clearLayers();
+        Array.from(markers).forEach((pin: any) => {
+            const pointOptions = {
+                radius: 4,
+                stroke: false,
+                color: pin?.properties?.color,
+                weight: 1,
+                opacity: 1,
+                fill: true,
+                fillOpacity: 1,
+            }
+            const circleMarker = L.circleMarker([
+                pin?.geometry?.coordinates[1],
+                pin?.geometry?.coordinates[0],
+            ], pointOptions).addTo(this.markerLayerGroup);
+            // this.map.flyTo([circleMarker.getLatLng().lat, circleMarker.getLatLng().lng], 6);            
+            return () => this.markerLayerGroup.removeLayer(circleMarker);
+        });
+
+    }
     setMarkers(markers: any[]): void {
         this.polygonLayerGroup.clearLayers();
         this.markerLayerGroup.clearLayers();
@@ -196,7 +277,7 @@ export class MapSDK {
                 pin?.geometry?.coordinates[1],
                 pin?.geometry?.coordinates[0],
             ], pointOptions).addTo(this.markerLayerGroup);
-            this.map.flyTo([circleMarker.getLatLng().lat, circleMarker.getLatLng().lng], 6);            
+            this.map.flyTo([circleMarker.getLatLng().lat, circleMarker.getLatLng().lng], 6);
             return () => this.markerLayerGroup.removeLayer(circleMarker);
         });
 
@@ -217,8 +298,14 @@ export class MapSDK {
             }
             const geojson = L.geoJSON(polygon, { style: polystyle }).addTo(this.polygonLayerGroup);
             this.map.flyTo([geojson.getBounds().getCenter().lat, geojson.getBounds().getCenter().lng], 6);
-            
+
             return () => this.polygonLayerGroup.removeLayer(geojson);
+        });
+    }
+
+    onShapeCreated(callback: (shape: string, layer: L.Layer) => void): void {
+        this.map.on('pm:create', (event) => {
+            callback(event.shape, event.layer);
         });
     }
 

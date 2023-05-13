@@ -1,6 +1,6 @@
 {
   "name": "globe-sdk-leafet",
-  "version": "0.0.2",
+  "version": "0.0.4",
   "description": "",
   "repository": {
     "type": "git",
@@ -24,6 +24,7 @@
     "leaflet": "^1.9.3",
     "@types/leaflet": "^1.9.3",
     "leaflet-sidebar-v2": "^3.2.3",
+    "@geoman-io/leaflet-geoman-free": "^2.14.2",
     "typescript": "^4.4.2",
     "tsup": "^6.5.0",
     "@changesets/cli": "^2.26.0"

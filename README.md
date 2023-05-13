@@ -1,6 +1,6 @@
-# Foobar
+# Globe map sdk
 
-Foobar is a Python library for dealing with word pluralization.
+Map sdk use only globe server 
 
 ## Installation
 
