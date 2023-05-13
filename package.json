@@ -1,5 +1,5 @@
 {
-  "name": "globe-sdk",
+  "name": "globe-sdk-leafet",
   "version": "0.0.1",
   "description": "",
   "repository": {
@@ -10,9 +10,13 @@
     "leaflet",
     "map-sdk"
   ],
-  "main": "index.ts",
+  "main": "dist/index.js",
+  "module": "dist/index.mjs",
+  "types": "dist/index.d.ts",
   "scripts": {
-    "test": "echo \"Error: no test specified\" && exit 1"
+    "build": "tsup index.ts --format cjs,esm --dts",
+    "release": "pnpm run build && changeset publish",
+    "lint": "tsc"
   },
   "author": "Powered by Jaloliidin",
   "license": "ISC",
@@ -20,10 +24,12 @@
     "leaflet": "^1.9.3",
     "@types/leaflet": "^1.9.3",
     "leaflet-sidebar-v2": "^3.2.3",
-    "typescript": "^4.4.2"
+    "typescript": "^4.4.2",
+    "tsup": "^6.5.0",
+    "@changesets/cli": "^2.26.0"
   },
   "bugs": {
-    "url": "https://github.com/Jaloliddin9917/leaflet-sdk/issues"
+    "url": "https://github.com/Jaloliddin9917/globe-sdk/issues"
   },
-  "homepage": "https://github.com/Jaloliddin9917/leaflet-sdk#readme"
+  "homepage": "https://github.com/Jaloliddin9917/globe-sdk#readme"
 }
