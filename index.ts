@@ -2,6 +2,7 @@ import * as L from "leaflet";
 import 'leaflet/dist/leaflet.css';
 import 'leaflet-sidebar-v2';
 import "./css/leaflet-sidebar.css";
+import "./css/leaflet-sidebar.min.css";
 import '@geoman-io/leaflet-geoman-free';
 import '@geoman-io/leaflet-geoman-free/dist/leaflet-geoman.css';
 
@@ -255,7 +256,7 @@ export class MapSDK {
                 pin?.geometry?.coordinates[1],
                 pin?.geometry?.coordinates[0],
             ], pointOptions).addTo(this.markerLayerGroup);
-            // this.map.flyTo([circleMarker.getLatLng().lat, circleMarker.getLatLng().lng], 6);            
+            this.map.flyTo([circleMarker.getLatLng().lat, circleMarker.getLatLng().lng], 6);            
             return () => this.markerLayerGroup.removeLayer(circleMarker);
         });
 

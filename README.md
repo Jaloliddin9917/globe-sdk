@@ -17,8 +17,10 @@ yarn add globe-sdk-leafet
 import React, { useEffect, useRef } from 'react';
 import { MapSDK } from 'globe-sdk-leafet'; // the path to your MapSDK file
 import "leaflet/dist/leaflet.css";
+import '@geoman-io/leaflet-geoman-free/dist/leaflet-geoman.css';
 import "globe-sdk-leafet/css/leaflet-sidebar.css";
 import "globe-sdk-leafet/css/leaflet-sidebar.min.css";
+
 
 const options: any = {
   map: {
@@ -29,13 +31,29 @@ const options: any = {
   },
 };
 
+
+
 const MapComponent: React.FC = () => {
   const mapContainerRef: any = useRef(null);
-  const mapSDKRef: any = useRef(null);
+  const mapSDKRef:any = useRef(null);
 
   useEffect(() => {
     mapSDKRef.current = new MapSDK(mapContainerRef.current);
     mapSDKRef.current.init(options);
+
+    mapSDKRef.current.onShapeCreated((shape, layer) => {
+      if (shape === 'Marker') {
+        const geojson = layer.toGeoJSON();
+        console.log(geojson);
+      } else if (shape === 'Circle') {
+        const geojson = layer.toGeoJSON();
+        console.log(geojson);
+      } else if (shape === 'Polygon' || shape === 'Rectangle' || shape === 'Polyline') {
+        const geojson = layer.toGeoJSON();
+        console.log(geojson);
+      }
+    });
+
 
     return () => {
       mapSDKRef.current?.destroy();
