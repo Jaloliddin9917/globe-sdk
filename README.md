@@ -15,12 +15,8 @@ yarn add globe-sdk-leafet
 
 ```typescript
 import React, { useEffect, useRef } from 'react';
-import { MapSDK } from 'globe-sdk-leafet'; // the path to your MapSDK file
-import "leaflet/dist/leaflet.css";
-import '@geoman-io/leaflet-geoman-free/dist/leaflet-geoman.css';
-import "globe-sdk-leafet/css/leaflet-sidebar.css";
-import "globe-sdk-leafet/css/leaflet-sidebar.min.css";
-
+import { MapSDK } from 'globe-sdk-leafet'; 
+import "globe-sdk-leafet/dist/index.css";
 
 const options: any = {
   map: {
@@ -31,17 +27,14 @@ const options: any = {
   },
 };
 
-
-
 const MapComponent: React.FC = () => {
   const mapContainerRef: any = useRef(null);
-  const mapSDKRef:any = useRef(null);
 
   useEffect(() => {
-    mapSDKRef.current = new MapSDK(mapContainerRef.current);
-    mapSDKRef.current.init(options);
-
-    mapSDKRef.current.onShapeCreated((shape, layer) => {
+    const mapSDK = new MapSDK(mapContainerRef.current);
+    mapSDK.init(options);
+    
+    mapSDK.onShapeCreated((shape:any, layer:any) => {
       if (shape === 'Marker') {
         const geojson = layer.toGeoJSON();
         console.log(geojson);
@@ -56,7 +49,7 @@ const MapComponent: React.FC = () => {
 
 
     return () => {
-      mapSDKRef.current?.destroy();
+      mapSDK?.destroy();
     };
   }, []);
 
@@ -70,7 +63,7 @@ const MapComponent: React.FC = () => {
 
 };
 
-export default MapComponent;
+export default MapComponent
 
 ```
 

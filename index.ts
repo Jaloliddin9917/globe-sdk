@@ -221,7 +221,8 @@ export class MapSDK {
       throw new Error(`HTTP error! status: ${response.status}`);
     }
     const markers = (await response.json()) as any[];
-    this.setMarkerCluster(markers);
+    // this.setMarkerCluster(markers);
+    this.setMarkers(markers)
   }
 
   async fetchPolygons(url: string): Promise<void> {
@@ -394,26 +395,26 @@ export class MapSDK {
 
     L.heatLayer(points, heatmapOptions).addTo(this.markerLayerGroup);
   }
-  setMarkerCluster(cluster: any[]): void {
-    this.markerLayerGroup.clearLayers();
-    this.polygonLayerGroup.clearLayers();
-    // @ts-ignore
-    const markers = L.markerClusterGroup();
-    Array.from(cluster).forEach((pin: any) => {
-      const cuffs = new L.Icon({
-        iconUrl: "https://freesvg.org/img/ts-map-pin.png",
-        iconSize: [25, 25],
-      });
-      const marker = L.marker(
-        [pin?.geometry?.coordinates[1], pin?.geometry?.coordinates[0]],
-        { icon: cuffs }
-      );
-      this.map.flyTo([marker.getLatLng().lat, marker.getLatLng().lng], 6);
-      // @ts-ignore
-      markers.addLayer(marker);
-    });
-    this.markerLayerGroup.addLayer(markers);
-  }
+  // setMarkerCluster(cluster: any[]): void {
+  //   this.markerLayerGroup.clearLayers();
+  //   this.polygonLayerGroup.clearLayers();
+  //   // @ts-ignore
+  //   const markers = L.markerClusterGroup();
+  //   Array.from(cluster).forEach((pin: any) => {
+  //     const cuffs = new L.Icon({
+  //       iconUrl: "https://freesvg.org/img/ts-map-pin.png",
+  //       iconSize: [25, 25],
+  //     });
+  //     const marker = L.marker(
+  //       [pin?.geometry?.coordinates[1], pin?.geometry?.coordinates[0]],
+  //       { icon: cuffs }
+  //     );
+  //     this.map.flyTo([marker.getLatLng().lat, marker.getLatLng().lng], 6);
+  //     // @ts-ignore
+  //     markers.addLayer(marker);
+  //   });
+  //   this.markerLayerGroup.addLayer(markers);
+  // }
 
   onShapeCreated(callback: (shape: string, layer: L.Layer) => void): void {
     this.map.on("pm:create", (event) => {
