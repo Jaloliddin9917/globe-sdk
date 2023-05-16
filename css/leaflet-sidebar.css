@@ -233,6 +233,13 @@ select.classic:focus {
     outline: 0;
 }
 
+.icon-tt {
+    background: url("https://cdn-icons-png.flaticon.com/512/1243/1243937.png");
+    width: 40px;
+    height: 40px;
+    background-size: cover;
+}
+
 @media (min-width: 768px) and (max-width: 991px) {
     .sidebar-pane {
         min-width: 265px;

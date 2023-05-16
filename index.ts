@@ -1,144 +1,156 @@
 import * as L from "leaflet";
-import 'leaflet/dist/leaflet.css';
-import 'leaflet-sidebar-v2';
+import "leaflet.heat";
+import "leaflet/dist/leaflet.css";
+import "leaflet-sidebar-v2";
 import "./css/leaflet-sidebar.css";
 import "./css/leaflet-sidebar.min.css";
-import '@geoman-io/leaflet-geoman-free';
-import '@geoman-io/leaflet-geoman-free/dist/leaflet-geoman.css';
+import "leaflet.markercluster";
+import "leaflet.markercluster/dist/MarkerCluster.css";
+import "leaflet.markercluster/dist/MarkerCluster.Default.css";
+import "@geoman-io/leaflet-geoman-free";
+import "@geoman-io/leaflet-geoman-free/dist/leaflet-geoman.css";
 
 export type MapSDKOptions = {
-    map: {
-        coordinates: any;
-        defaultZoom: number;
-        onMapClick?: () => void;
-    };
-    tile: {
-        url: string;
-        attribution: string;
-    };
-    clusterMarkers?: ILayer[];
-    markers?: ILayer[];
-    lines?: ILayer[];
-    circles?: ILayer[];
-    polygons?: ILayer[];
-    routes?: ILayer[];
+  map: {
+    coordinates: any;
+    defaultZoom: number;
+    onMapClick?: () => void;
+  };
+  tile: {
+    url: string;
+    attribution: string;
+  };
+  clusterMarkers?: ILayer[];
+  markers?: ILayer[];
+  lines?: ILayer[];
+  circles?: ILayer[];
+  polygons?: ILayer[];
+  routes?: ILayer[];
 };
 
 interface ILayer {
-    type: string,
-    features: [
-        {
-            type: string,
-            properties: {},
-            geometry: {
-                coordinates: [],
-                type: string
-            }
-        }
-    ]
+  type: string;
+  features: [
+    {
+      type: string;
+      properties: {};
+      geometry: {
+        coordinates: [];
+        type: string;
+      };
+    }
+  ];
 }
 
-
-
 interface IOptions {
-    map: {
-        coordinates: {
-            latitude: number;
-            longitude: number;
-        }
+  map: {
+    coordinates: {
+      latitude: number;
+      longitude: number;
     };
+  };
 }
 
 interface IProject {
-    Id: string;
-    Name: string;
+  Id: string;
+  Name: string;
 }
 
 interface ILayer {
-    id: string;
-    name: string;
-    data_type: string;
+  id: string;
+  name: string;
+  data_type: string;
 }
 
 export class MapSDK {
-    private container: HTMLElement;
-    private options: any;
-    private map: L.Map;
-    private popup: any;
+  private container: HTMLElement;
+  private options: any;
+  private map: L.Map;
+  private popup: any;
 
-    private markerLayerGroup: L.LayerGroup;
-    private polygonLayerGroup: L.LayerGroup;
+  private markerLayerGroup: L.LayerGroup;
+  private polygonLayerGroup: L.LayerGroup;
 
-    private baseLayers: { [name: string]: L.TileLayer };
+  private baseLayers: { [name: string]: L.TileLayer };
 
-    private sidebar: L.Control.Sidebar;
+  private sidebar: L.Control.Sidebar;
 
+  constructor(container: HTMLElement) {
+    this.container = container;
+    this.map = L.map(this.container, { zoomControl: false });
+    // Initialize layer groups here
+    this.markerLayerGroup = L.layerGroup();
+    this.polygonLayerGroup = L.layerGroup();
 
+    this.baseLayers = {};
+    (window as any).mapSDK = this;
 
-    constructor(container: HTMLElement) {
-        this.container = container;
-        this.map = L.map(this.container, { zoomControl: false });
-        // Initialize layer groups here
-        this.markerLayerGroup = L.layerGroup();
-        this.polygonLayerGroup = L.layerGroup();
+    this.sidebar = L.control
+      .sidebar({
+        autopan: true,
+        closeButton: true,
+        container: "sidebar",
+        position: "left",
+      })
+      .addTo(this.map);
 
-        this.baseLayers = {};
-        (window as any).mapSDK = this;
+    this.map.pm.addControls({
+      position: "topright",
+    });
 
-        this.sidebar = L.control.sidebar({
-            autopan: true,
-            closeButton: true,
-            container: 'sidebar',
-            position: 'left',
-        }).addTo(this.map);
-
-        this.map.pm.addControls({
-            position: 'topright',
+    this.renderOptions()
+      .then((options) => {
+        this.sidebar.addPanel({
+          id: "js-api",
+          tab: '<div class="icon-tt"></div>',
+          title: "Layers",
+          pane: options,
         });
+      })
+      .catch((error) => console.error("Failed to render options:", error));
+  }
 
-        this.renderOptions()
-            .then(options => {
-                this.sidebar
-                    .addPanel({
-                        id: 'js-api',
-                        tab: '<div class="icon-tt"></div>',
-                        title: 'Layers',
-                        pane: options
-                    });
-            })
-            .catch(error => console.error('Failed to render options:', error));
+  init(options: IOptions): void {
+    this.options = { ...options };
 
-    }
+    this.map.setView(
+      [options.map.coordinates.latitude, options.map.coordinates.longitude],
+      1
+    );
 
-    init(options: IOptions): void {
-        this.options = { ...options };
+    const tileLayer2 = this.addTileLayer(
+      "https://{s}.google.com/vt/lyrs=m@221097413,traffic&x={x}&y={y}&z={z}&hl=en",
+      { subdomains: ["mt0", "mt1", "mt2", "mt3"] }
+    );
+    this.baseLayers["Traffic"] = tileLayer2;
+    const tileLayer3 = this.addTileLayer(
+      "http://{s}.google.com/vt/lyrs=s,h&x={x}&y={y}&z={z}&hl=en",
+      { subdomains: ["mt0", "mt1", "mt2", "mt3"] }
+    );
+    this.baseLayers["Hybrid"] = tileLayer3;
+    const tileLayer = this.addTileLayer(
+      "http://{s}.google.com/vt/lyrs=m&x={x}&y={y}&z={z}&hl=en",
+      { subdomains: ["mt0", "mt1", "mt2", "mt3"] }
+    );
+    this.baseLayers["Streets"] = tileLayer;
 
-        this.map.setView([options.map.coordinates.latitude, options.map.coordinates.longitude], 1);
+    // Add the layer groups to the map here
+    this.markerLayerGroup.addTo(this.map);
+    this.polygonLayerGroup.addTo(this.map);
 
+    L.control.layers(this.baseLayers).addTo(this.map);
+  }
 
-        const tileLayer2 = this.addTileLayer("https://{s}.google.com/vt/lyrs=m@221097413,traffic&x={x}&y={y}&z={z}&hl=en", { subdomains: ['mt0', 'mt1', 'mt2', 'mt3'] });
-        this.baseLayers['Traffic'] = tileLayer2;
-        const tileLayer3 = this.addTileLayer("http://{s}.google.com/vt/lyrs=s,h&x={x}&y={y}&z={z}&hl=en", { subdomains: ['mt0', 'mt1', 'mt2', 'mt3'] });
-        this.baseLayers['Hybrid'] = tileLayer3;
-        const tileLayer = this.addTileLayer("http://{s}.google.com/vt/lyrs=m&x={x}&y={y}&z={z}&hl=en", { subdomains: ['mt0', 'mt1', 'mt2', 'mt3'] });
-        this.baseLayers['Streets'] = tileLayer;
+  async renderOptions(): Promise<string> {
+    const projects = await this.fetchProjects();
 
-        // Add the layer groups to the map here
-        this.markerLayerGroup.addTo(this.map);
-        this.polygonLayerGroup.addTo(this.map);
+    const projectOptions = projects
+      ?.map(
+        (project) => `<option value="${project.Id}">${project.Name}</option>`
+      )
+      .join("");
 
-        L.control.layers(this.baseLayers).addTo(this.map);
-
-    }
-
-
-
-    async renderOptions(): Promise<string> {
-        const projects = await this.fetchProjects();
-
-        const projectOptions = projects.map((project) => `<option value="${project.Id}">${project.Name}</option>`).join('');
-
-        return `
+    return `
         <label class="select-label" for="project-select">Select project</label>
         <div class="select">
             <select class="classic" id="project-select" onchange="mapSDK.handleProjectChange(this.value)">
@@ -152,173 +164,272 @@ export class MapSDK {
             </select>
         </div>
     `;
+  }
+
+  async fetchProjects(): Promise<IProject[]> {
+    const response = await fetch("http://localhost:7020/projects");
+    if (!response.ok) {
+      throw new Error(`HTTP error! status: ${response.status}`);
     }
+    const projects = await response.json();
+    return projects;
+  }
 
+  async fetchLayers(url: string): Promise<ILayer[]> {
+    const response = await fetch(url);
+    if (!response.ok) {
+      throw new Error(`HTTP error! status: ${response.status}`);
+    }
+    const layers = await response.json();
+    return layers;
+  }
 
-    async fetchProjects(): Promise<IProject[]> {
-        const response = await fetch('http://localhost:7020/projects');
-        if (!response.ok) {
-            throw new Error(`HTTP error! status: ${response.status}`);
+  async handleProjectChange(projectId: string): Promise<void> {
+    console.log("Selected project:", projectId);
+    try {
+      const layers = await this.fetchLayers(
+        `http://localhost:7020/layers/${projectId}`
+      );
+      this.renderOption(layers);
+    } catch (error) {
+      console.error("Failed to fetch layers for project:", error);
+    }
+  }
+
+  async handleLayerChange(layer: any): Promise<void> {
+    let layers = JSON.parse(layer);
+    console.log("Selected layer:", layers);
+    try {
+      if (layers.data_type === "point") {
+        await this.fetchMarkers(
+          `http://localhost:7020/layer/data/${layers.id}`
+        );
+      }
+      if (layers.data_type === "polygon") {
+        await this.fetchPolygons(
+          `http://localhost:7020/layer/data/${layers.id}`
+        );
+      }
+    } catch (error) {
+      console.error("Failed to fetch layers for project:", error);
+    }
+  }
+
+  async fetchMarkers(url: string): Promise<void> {
+    const response = await fetch(url);
+    if (!response.ok) {
+      throw new Error(`HTTP error! status: ${response.status}`);
+    }
+    const markers = (await response.json()) as any[];
+    this.setMarkerCluster(markers);
+  }
+
+  async fetchPolygons(url: string): Promise<void> {
+    const response = await fetch(url);
+    if (!response.ok) {
+      throw new Error(`HTTP error! status: ${response.status}`);
+    }
+    const polygons = (await response.json()) as any[];
+    this.setPolygons(polygons);
+  }
+
+  renderOption(layers: any[]): void {
+    // Clear the current layers from the select
+    const select: any = document.getElementById("layer-select");
+    select.innerHTML = "";
+
+    // Add the new layers to the select
+    layers.forEach((layer) => {
+      const option = document.createElement("option");
+      option.value = JSON.stringify(layer);
+      option.textContent = layer.name;
+      select.appendChild(option);
+    });
+  }
+  addTileLayer(url: string, options?: L.TileLayerOptions): L.TileLayer {
+    const tileLayer = L.tileLayer(url, options);
+    tileLayer.addTo(this.map);
+    return tileLayer;
+  }
+
+  // Symbology Layers
+  setCircles(markers: any[]): void {
+    this.polygonLayerGroup.clearLayers();
+    this.markerLayerGroup.clearLayers();
+    Array.from(markers).forEach((pin: any) => {
+      const pointOptions = {
+        radius: 4,
+        stroke: false,
+        color: pin?.properties?.color,
+        weight: 1,
+        opacity: 1,
+        fill: true,
+        fillOpacity: 1,
+      };
+
+      // Start the popup content
+      let popupContent =
+        '<h4 class="text-primary">Street Light</h4>' +
+        '<div class="container"><table class="table table-striped">' +
+        "<thead><tr><th>Properties</th><th>Value</th></tr></thead><tbody>";
+
+      // Add a row for each property in the pin.properties object
+      for (let prop in pin.properties) {
+        if (pin.properties.hasOwnProperty(prop)) {
+          if (prop === "imageUrl") {
+            // Handle the imageUrl property differently
+            popupContent += `</tbody></table><img src="${pin.properties[prop]}" alt="Image" width="200px" height="200px"></div>`;
+          } else {
+            let value = pin.properties[prop].toString().substring(0, 15);
+            popupContent += `<tr><td>${prop}</td><td>${value}</td></tr>`;
+          }
         }
-        const projects = await response.json();
-        return projects;
-    }
+      }
 
-    async fetchLayers(url: string): Promise<ILayer[]> {
-        const response = await fetch(url);
-        if (!response.ok) {
-            throw new Error(`HTTP error! status: ${response.status}`);
+      // Close the popup content
+      popupContent += "</tbody></table></div>";
+
+      const circleMarker = L.circleMarker(
+        [pin?.geometry?.coordinates[1], pin?.geometry?.coordinates[0]],
+        pointOptions
+      )
+        .bindPopup(popupContent)
+        .addTo(this.markerLayerGroup);
+      this.map.flyTo(
+        [circleMarker.getLatLng().lat, circleMarker.getLatLng().lng],
+        6
+      );
+      return () => this.markerLayerGroup.removeLayer(circleMarker);
+    });
+  }
+  setMarkers(markers: any[]): void {
+    this.polygonLayerGroup.clearLayers();
+    this.markerLayerGroup.clearLayers();
+    Array.from(markers).forEach((pin: any) => {
+      const cuffs = new L.Icon({
+        iconUrl: pin?.properties?.color_or_img
+          ? pin?.properties?.color_or_img
+          : "https://freesvg.org/img/ts-map-pin.png",
+        iconSize: [25, 25],
+      });
+
+      // Start the popup content
+      let popupContent =
+        '<h4 class="text-primary">Street Light</h4>' +
+        '<div class="container"><table class="table table-striped">' +
+        "<thead><tr><th>Properties</th><th>Value</th></tr></thead><tbody>";
+
+      // Add a row for each property in the pin.properties object
+      for (let prop in pin.properties) {
+        if (pin.properties.hasOwnProperty(prop)) {
+          if (prop === "imageUrl") {
+            // Handle the imageUrl property differently
+            popupContent += `</tbody></table><img src="${pin.properties[prop]}" alt="Image" width="200px" height="200px"></div>`;
+          } else {
+            let value = pin.properties[prop].toString().substring(0, 15);
+            popupContent += `<tr><td>${prop}</td><td>${value}</td></tr>`;
+          }
         }
-        const layers = await response.json();
-        return layers;
-    }
+      }
 
+      // Close the popup content
+      popupContent += "</tbody></table></div>";
 
-    async handleProjectChange(projectId: string): Promise<void> {
-        console.log('Selected project:', projectId);
-        try {
-            const layers = await this.fetchLayers(`http://localhost:7020/layers/${projectId}`);
-            this.setLayers(layers);
-        } catch (error) {
-            console.error('Failed to fetch layers for project:', error);
-        }
-    }
+      const marker = L.marker(
+        [pin?.geometry?.coordinates[1], pin?.geometry?.coordinates[0]],
+        { icon: cuffs }
+      )
+        .bindPopup(popupContent)
+        .addTo(this.markerLayerGroup);
 
-    async handleLayerChange(layer: any): Promise<void> {
-        let layers = JSON.parse(layer)
-        console.log('Selected layer:', layers);
-        try {
-            if (layers.data_type === "point") {
-                await this.fetchMarkers(`http://localhost:7020/layer/data/${layers.id}`);
-            }
-            if (layers.data_type === "polygon") {
-                await this.fetchPolygons(`http://localhost:7020/layer/data/${layers.id}`);
-            }
-        } catch (error) {
-            console.error('Failed to fetch layers for project:', error);
-        }
-    }
+      this.map.flyTo([marker.getLatLng().lat, marker.getLatLng().lng], 6);
+      return () => this.markerLayerGroup.removeLayer(marker);
+    });
+  }
+  setPolygons(polygons: any[]): void {
+    this.markerLayerGroup.clearLayers();
+    this.polygonLayerGroup.clearLayers();
 
+    Array.from(polygons).forEach((polygon: any) => {
+      const polystyle = () => {
+        return {
+          fillColor: polygon?.properties?.color || "blue",
+          weight: 1,
+          opacity: 1,
+          color: "white", //Outline color
+          fillOpacity: 0.8,
+        };
+      };
+      const geojson = L.geoJSON(polygon, { style: polystyle }).addTo(
+        this.polygonLayerGroup
+      );
+      this.map.flyTo(
+        [
+          geojson.getBounds().getCenter().lat,
+          geojson.getBounds().getCenter().lng,
+        ],
+        6
+      );
 
-    async fetchMarkers(url: string): Promise<void> {
-        const response = await fetch(url);
-        if (!response.ok) {
-            throw new Error(`HTTP error! status: ${response.status}`);
-        }
-        const markers = await response.json() as any[];
-        this.setCircle(markers);
-        // this.sidebar.setContent('Polygons fetched and set.'); // Displaying a message in the sidebar
-    }
+      return () => this.polygonLayerGroup.removeLayer(geojson);
+    });
+  }
+  setHeatLayer(markers: any[]): void {
+    this.markerLayerGroup.clearLayers();
+    this.polygonLayerGroup.clearLayers();
+    const points: any = markers.map((p) => {
+      return [p.geometry?.coordinates[1], p.geometry?.coordinates[0]];
+    });
+    let heatmapOptions = {
+      radius: 15,
+      blur: 20,
+      maxZoom: 10,
+      gradient: {
+        0.4: "blue",
+        0.6: "green",
+        0.8: "yellow",
+        1.0: "red",
+      },
+    };
 
-    async fetchPolygons(url: string): Promise<void> {
-        const response = await fetch(url);
-        if (!response.ok) {
-            throw new Error(`HTTP error! status: ${response.status}`);
-        }
-        const polygons = await response.json() as any[];
-        this.setPolygons(polygons);
-    }
+    L.heatLayer(points, heatmapOptions).addTo(this.markerLayerGroup);
+  }
+  setMarkerCluster(cluster: any[]): void {
+    this.markerLayerGroup.clearLayers();
+    this.polygonLayerGroup.clearLayers();
+    // @ts-ignore
+    const markers = L.markerClusterGroup();
+    Array.from(cluster).forEach((pin: any) => {
+      const cuffs = new L.Icon({
+        iconUrl: "https://freesvg.org/img/ts-map-pin.png",
+        iconSize: [25, 25],
+      });
+      const marker = L.marker(
+        [pin?.geometry?.coordinates[1], pin?.geometry?.coordinates[0]],
+        { icon: cuffs }
+      );
+      this.map.flyTo([marker.getLatLng().lat, marker.getLatLng().lng], 6);
+      // @ts-ignore
+      markers.addLayer(marker);
+    });
+    this.markerLayerGroup.addLayer(markers);
+  }
 
-    setLayers(layers: any[]): void {
-        // Clear the current layers from the select
-        const select: any = document.getElementById('layer-select');
-        select.innerHTML = '';
+  onShapeCreated(callback: (shape: string, layer: L.Layer) => void): void {
+    this.map.on("pm:create", (event) => {
+      callback(event.shape, event.layer);
+    });
+  }
 
-        // Add the new layers to the select
-        layers.forEach(layer => {
-            const option = document.createElement('option');
-            option.value = JSON.stringify(layer);
-            option.textContent = layer.name;
-            select.appendChild(option);
-        });
-    }
-    addTileLayer(url: string, options?: L.TileLayerOptions): L.TileLayer {
-        const tileLayer = L.tileLayer(url, options);
-        tileLayer.addTo(this.map);
-        return tileLayer;
-    }
+  private onMapClick(e: any) {
+    this.popup
+      .setLatLng(e.latlng)
+      .setContent("You clicked the map at " + e.latlng.toString())
+      .openOn(this.map);
+  }
 
-    // Symbology LAyers
-    setCircle(markers: any[]): void {
-        this.polygonLayerGroup.clearLayers();
-        this.markerLayerGroup.clearLayers();
-        Array.from(markers).forEach((pin: any) => {
-            const pointOptions = {
-                radius: 4,
-                stroke: false,
-                color: pin?.properties?.color,
-                weight: 1,
-                opacity: 1,
-                fill: true,
-                fillOpacity: 1,
-            }
-            const circleMarker = L.circleMarker([
-                pin?.geometry?.coordinates[1],
-                pin?.geometry?.coordinates[0],
-            ], pointOptions).addTo(this.markerLayerGroup);
-            this.map.flyTo([circleMarker.getLatLng().lat, circleMarker.getLatLng().lng], 6);            
-            return () => this.markerLayerGroup.removeLayer(circleMarker);
-        });
-
-    }
-    setMarkers(markers: any[]): void {
-        this.polygonLayerGroup.clearLayers();
-        this.markerLayerGroup.clearLayers();
-        Array.from(markers).forEach((pin: any) => {
-            const pointOptions = {
-                radius: 4,
-                stroke: false,
-                color: pin?.properties?.color,
-                weight: 1,
-                opacity: 1,
-                fill: true,
-                fillOpacity: 1,
-            }
-            const circleMarker = L.circleMarker([
-                pin?.geometry?.coordinates[1],
-                pin?.geometry?.coordinates[0],
-            ], pointOptions).addTo(this.markerLayerGroup);
-            this.map.flyTo([circleMarker.getLatLng().lat, circleMarker.getLatLng().lng], 6);
-            return () => this.markerLayerGroup.removeLayer(circleMarker);
-        });
-
-    }
-    setPolygons(polygons: any[]): void {
-        this.markerLayerGroup.clearLayers();
-        this.polygonLayerGroup.clearLayers();
-
-        Array.from(polygons).forEach((polygon: any) => {
-            const polystyle = () => {
-                return {
-                    fillColor: polygon?.properties?.color || "blue",
-                    weight: 1,
-                    opacity: 1,
-                    color: 'white',  //Outline color
-                    fillOpacity: 0.8
-                };
-            }
-            const geojson = L.geoJSON(polygon, { style: polystyle }).addTo(this.polygonLayerGroup);
-            this.map.flyTo([geojson.getBounds().getCenter().lat, geojson.getBounds().getCenter().lng], 6);
-
-            return () => this.polygonLayerGroup.removeLayer(geojson);
-        });
-    }
-
-    onShapeCreated(callback: (shape: string, layer: L.Layer) => void): void {
-        this.map.on('pm:create', (event) => {
-            callback(event.shape, event.layer);
-        });
-    }
-
-    private onMapClick(e: any) {
-        this.popup
-            .setLatLng(e.latlng)
-            .setContent("You clicked the map at " + e.latlng.toString())
-            .openOn(this.map);
-    }
-
-    destroy(): void {
-        this.map.off();
-        this.map.remove();
-    }
+  destroy(): void {
+    this.map.off();
+    this.map.remove();
+  }
 }

@@ -599,7 +599,14 @@
   dependencies:
     ci-info "^3.1.0"
 
-"@types/leaflet@^1.9.3":
+"@types/leaflet.heat@^0.2.1":
+  version "0.2.1"
+  resolved "https://registry.yarnpkg.com/@types/leaflet.heat/-/leaflet.heat-0.2.1.tgz#5fba8e577645f481eecbbb09835b04684eaa9b9c"
+  integrity sha512-NESIrQcnaT2gONYOUMfuppWdPDNkmH69qTa5F1kHCSh2WXno84YpOzJn/U+aGSNjUFRdVnRcxn1uxJn68/GNRA==
+  dependencies:
+    "@types/leaflet" "*"
+
+"@types/leaflet@*", "@types/leaflet@^1.9.3":
   version "1.9.3"
   resolved "https://registry.yarnpkg.com/@types/leaflet/-/leaflet-1.9.3.tgz#7aac302189eb3aa283f444316167995df42a5467"
   integrity sha512-Caa1lYOgKVqDkDZVWkto2Z5JtVo09spEaUt2S69LiugbBpoqQu92HYFMGUbYezZbnBkyOxMNPXHSgRrRY5UyIA==
@@ -1637,6 +1644,16 @@ leaflet-sidebar-v2@^3.2.3:
   version "3.2.3"
   resolved "https://registry.yarnpkg.com/leaflet-sidebar-v2/-/leaflet-sidebar-v2-3.2.3.tgz#73bb949d7d4f51f22cbda875806b9aa804d31717"
   integrity sha512-narzdn81Y/8YpgHR3jhs93LhrLq0AGSRo7CXHEICHfMeK6IHSbtFOF9CTSfueaumRK0TgvHkiiYJb9dTKta6ZQ==
+
+leaflet.heat@^0.2.0:
+  version "0.2.0"
+  resolved "https://registry.yarnpkg.com/leaflet.heat/-/leaflet.heat-0.2.0.tgz#109d8cf586f0adee41f05aff031e27a77fecc229"
+  integrity sha512-Cd5PbAA/rX3X3XKxfDoUGi9qp78FyhWYurFg3nsfhntcM/MCNK08pRkf4iEenO1KNqwVPKCmkyktjW3UD+h9bQ==
+
+leaflet.markercluster@^1.5.3:
+  version "1.5.3"
+  resolved "https://registry.yarnpkg.com/leaflet.markercluster/-/leaflet.markercluster-1.5.3.tgz#9cdb52a4eab92671832e1ef9899669e80efc4056"
+  integrity sha512-vPTw/Bndq7eQHjLBVlWpnGeLa3t+3zGiuM7fJwCkiMFq+nmRuG3RI3f7f4N4TDX7T4NpbAXpR2+NTRSEGfCSeA==
 
 leaflet@^1.9.3:
   version "1.9.3"
