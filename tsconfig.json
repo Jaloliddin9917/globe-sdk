@@ -9,6 +9,5 @@
       "lib": ["es6", "dom"],
       "types": ["node"]
     },
-    "include": ["index.ts"],
-    "exclude": ["node_modules"]
+    "include": ["index.ts"]
   }
