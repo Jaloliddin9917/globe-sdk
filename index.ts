@@ -100,7 +100,7 @@ export class MapSDK {
 
     this.renderOptions()
       .then((options) => {
-        this.sidebar.addPanel({
+        this.sidebar?.addPanel({
           id: "js-api",
           tab: '<div class="icon-tt"></div>',
           title: "Layers",
@@ -138,7 +138,7 @@ export class MapSDK {
     this.markerLayerGroup.addTo(this.map);
     this.polygonLayerGroup.addTo(this.map);
 
-    L.control.layers(this.baseLayers).addTo(this.map);
+    L.control.layers(this.baseLayers, undefined, { position: 'topleft' }).addTo(this.map);
   }
 
   async renderOptions(): Promise<string> {
@@ -417,7 +417,7 @@ export class MapSDK {
   }
 
   onShapeCreated(callback: (shape: string, layer: L.Layer) => void): void {
-    this.map.on("pm:create", (event:any) => {
+    this.map.on("pm:create", (event: any) => {
       callback(event.shape, event.layer);
     });
   }
