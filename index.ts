@@ -7,8 +7,12 @@ import "./css/leaflet-sidebar.min.css";
 import "leaflet.markercluster";
 import "leaflet.markercluster/dist/MarkerCluster.css";
 import "leaflet.markercluster/dist/MarkerCluster.Default.css";
+
 import "@geoman-io/leaflet-geoman-free";
 import "@geoman-io/leaflet-geoman-free/dist/leaflet-geoman.css";
+
+import "leaflet-routing-machine/dist/leaflet-routing-machine.css";
+import "leaflet-routing-machine";
 
 export type MapSDKOptions = {
   map: {
@@ -74,6 +78,7 @@ export class MapSDK {
   private baseLayers: { [name: string]: L.TileLayer };
 
   private sidebar: L.Control.Sidebar;
+  private routingControl: L.Routing.Control;
 
   constructor(container: HTMLElement) {
     this.container = container;
@@ -93,6 +98,16 @@ export class MapSDK {
         position: "left",
       })
       .addTo(this.map);
+
+    this.routingControl = L.Routing.control({
+      waypoints: [],
+      routeWhileDragging: true,
+      show: false,
+      collapsible: true,
+      addWaypoints: true,
+      fitSelectedRoutes: true,
+      showAlternatives: true,
+    }).addTo(this.map);
 
     this.map.pm.addControls({
       position: "topright",
@@ -118,6 +133,10 @@ export class MapSDK {
       1
     );
 
+    L.Marker.prototype.options.icon = L.icon({
+      iconUrl: "https://unpkg.com/leaflet@1.7.1/dist/images/marker-icon.png",
+    });
+
     const tileLayer2 = this.addTileLayer(
       "https://{s}.google.com/vt/lyrs=m@221097413,traffic&x={x}&y={y}&z={z}&hl=en",
       { subdomains: ["mt0", "mt1", "mt2", "mt3"] }
@@ -138,7 +157,9 @@ export class MapSDK {
     this.markerLayerGroup.addTo(this.map);
     this.polygonLayerGroup.addTo(this.map);
 
-    L.control.layers(this.baseLayers, undefined, { position: 'topleft' }).addTo(this.map);
+    L.control
+      .layers(this.baseLayers, undefined, { position: "topleft" })
+      .addTo(this.map);
   }
 
   async renderOptions(): Promise<string> {
@@ -222,7 +243,7 @@ export class MapSDK {
     }
     const markers = (await response.json()) as any[];
     // this.setMarkerCluster(markers);
-    this.setMarkers(markers)
+    this.setMarkers(markers);
   }
 
   async fetchPolygons(url: string): Promise<void> {
@@ -414,6 +435,14 @@ export class MapSDK {
       markers.addLayer(marker);
     });
     this.markerLayerGroup.addLayer(markers);
+  }
+  setRouting(waypoints: { lat: number; lng: number }[]): void {
+    let leafletWaypoints = waypoints.map((wp) => L.latLng(wp.lat, wp.lng));
+    this.routingControl.setWaypoints(leafletWaypoints);
+  }
+
+  clearRouting(): void {
+    this.routingControl.setWaypoints([]);
   }
 
   onShapeCreated(callback: (shape: string, layer: L.Layer) => void): void {
