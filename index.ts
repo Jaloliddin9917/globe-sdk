@@ -172,20 +172,47 @@ export class MapSDK {
       .join("");
 
     return `
-        <label class="select-label" for="project-select">Select project</label>
-        <div class="select">
-            <select class="classic" id="project-select" onchange="mapSDK.handleProjectChange(this.value)">
-                ${projectOptions}
-            </select>
-        </div>
-        <label for="layer-select">Select layer</label>
-        <div class="select">
-            <select class="classic" id="layer-select" onchange="mapSDK.handleLayerChange(this.value)">
-                <!-- layers will be populated dynamically -->
-            </select>
-        </div>
+    <label class="select-label" for="project-select">Select project</label>
+    <div class="select">
+        <select class="classic" id="project-select" onchange="mapSDK.handleProjectChange(this.value)">
+            ${projectOptions}
+        </select>
+    </div>
+    <fieldset class="check-layer" id="layer-select">
+     <legend>Select layers</legend>
+        <!-- layers will be populated dynamically -->
+    </fieldset>
     `;
   }
+
+
+  renderOption(layers: any[]): void {
+    // Clear the current layers from the select
+    const container: any = document.getElementById("layer-select");
+    container.innerHTML = "";
+
+    // Add the new layers to the container as checkboxes
+    layers.forEach((layer) => {
+      const checkbox = document.createElement("input");
+      checkbox.type = "checkbox";
+      checkbox.value = JSON.stringify(layer);
+      checkbox.id = `layer-checkbox-${layer.id}`; // Assume each layer has a unique id
+      checkbox.onchange = () => this.handleLayerChange({
+        id: layer.id,
+        checked: checkbox.checked,
+        layer: JSON.parse(checkbox.value),
+      });
+      const label = document.createElement('label');
+      label.htmlFor = `layer-checkbox-${layer.id}`;
+      label.appendChild(document.createTextNode(layer.name));
+
+      // Append checkbox and label to the container
+      container.appendChild(checkbox);
+      container.appendChild(label);
+      container.appendChild(document.createElement("br")); // Add a line break for readability
+    });
+  }
+
 
   async fetchProjects(): Promise<IProject[]> {
     const response = await fetch("http://localhost:7020/projects");
@@ -217,19 +244,28 @@ export class MapSDK {
     }
   }
 
-  async handleLayerChange(layer: any): Promise<void> {
-    let layers = JSON.parse(layer);
-    console.log("Selected layer:", layers);
+  async handleLayerChange(layerData: { id: string, checked: boolean, layer: any }): Promise<void> {
+    let { layer, checked, id } = layerData
+    console.log("Selected layer:", layer, checked);
+    console.log(this.markerLayerGroup);
     try {
-      if (layers.data_type === "point") {
-        await this.fetchMarkers(
-          `http://localhost:7020/layer/data/${layers.id}`
-        );
+      if (layer.data_type === "point") {
+        if (checked === true) {
+          await this.fetchMarkers(
+            `http://localhost:7020/layer/data/${layer.id}`
+          );
+        } else {
+          this.markerLayerGroup.clearLayers();
+        }
       }
-      if (layers.data_type === "polygon") {
-        await this.fetchPolygons(
-          `http://localhost:7020/layer/data/${layers.id}`
-        );
+      if (layer.data_type === "polygon") {
+        if (checked === true) {
+          await this.fetchPolygons(
+            `http://localhost:7020/layer/data/${layer.id}`
+          );
+        } else {
+          this.polygonLayerGroup.clearLayers();
+        }
       }
     } catch (error) {
       console.error("Failed to fetch layers for project:", error);
@@ -255,19 +291,7 @@ export class MapSDK {
     this.setPolygons(polygons);
   }
 
-  renderOption(layers: any[]): void {
-    // Clear the current layers from the select
-    const select: any = document.getElementById("layer-select");
-    select.innerHTML = "";
 
-    // Add the new layers to the select
-    layers.forEach((layer) => {
-      const option = document.createElement("option");
-      option.value = JSON.stringify(layer);
-      option.textContent = layer.name;
-      select.appendChild(option);
-    });
-  }
   addTileLayer(url: string, options?: L.TileLayerOptions): L.TileLayer {
     const tileLayer = L.tileLayer(url, options);
     tileLayer.addTo(this.map);
@@ -276,7 +300,6 @@ export class MapSDK {
 
   // Symbology Layers
   setCircles(markers: any[]): void {
-    this.polygonLayerGroup.clearLayers();
     this.markerLayerGroup.clearLayers();
     Array.from(markers).forEach((pin: any) => {
       const pointOptions = {
@@ -325,7 +348,6 @@ export class MapSDK {
     });
   }
   setMarkers(markers: any[]): void {
-    this.polygonLayerGroup.clearLayers();
     this.markerLayerGroup.clearLayers();
     Array.from(markers).forEach((pin: any) => {
       const cuffs = new L.Icon({
@@ -369,7 +391,6 @@ export class MapSDK {
     });
   }
   setPolygons(polygons: any[]): void {
-    this.markerLayerGroup.clearLayers();
     this.polygonLayerGroup.clearLayers();
 
     Array.from(polygons).forEach((polygon: any) => {
@@ -398,7 +419,6 @@ export class MapSDK {
   }
   setHeatLayer(markers: any[]): void {
     this.markerLayerGroup.clearLayers();
-    this.polygonLayerGroup.clearLayers();
     const points: any = markers.map((p) => {
       return [p.geometry?.coordinates[1], p.geometry?.coordinates[0]];
     });
@@ -418,7 +438,6 @@ export class MapSDK {
   }
   setMarkerCluster(cluster: any[]): void {
     this.markerLayerGroup.clearLayers();
-    this.polygonLayerGroup.clearLayers();
     // @ts-ignore
     const markers = L.markerClusterGroup();
     Array.from(cluster).forEach((pin: any) => {
@@ -440,7 +459,6 @@ export class MapSDK {
     let leafletWaypoints = waypoints.map((wp) => L.latLng(wp.lat, wp.lng));
     this.routingControl.setWaypoints(leafletWaypoints);
   }
-
   clearRouting(): void {
     this.routingControl.setWaypoints([]);
   }
