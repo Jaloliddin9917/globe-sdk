@@ -8,8 +8,8 @@ import "leaflet.markercluster";
 import "leaflet.markercluster/dist/MarkerCluster.css";
 import "leaflet.markercluster/dist/MarkerCluster.Default.css";
 
-import "@geoman-io/leaflet-geoman-free";
-import "@geoman-io/leaflet-geoman-free/dist/leaflet-geoman.css";
+// import "@geoman-io/leaflet-geoman-free";
+// import "@geoman-io/leaflet-geoman-free/dist/leaflet-geoman.css";
 
 import "leaflet-routing-machine/dist/leaflet-routing-machine.css";
 import "leaflet-routing-machine";
@@ -109,9 +109,9 @@ export class MapSDK {
       showAlternatives: true,
     }).addTo(this.map);
 
-    this.map.pm.addControls({
-      position: "topright",
-    });
+    // this.map.pm.addControls({
+    //   position: "topright",
+    // });
 
     this.renderOptions()
       .then((options) => {
@@ -463,11 +463,11 @@ export class MapSDK {
     this.routingControl.setWaypoints([]);
   }
 
-  onShapeCreated(callback: (shape: string, layer: L.Layer) => void): void {
-    this.map.on("pm:create", (event: any) => {
-      callback(event.shape, event.layer);
-    });
-  }
+  // onShapeCreated(callback: (shape: string, layer: L.Layer) => void): void {
+  //   this.map.on("pm:create", (event: any) => {
+  //     callback(event.shape, event.layer);
+  //   });
+  // }
 
   private onMapClick(e: any) {
     this.popup

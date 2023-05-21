@@ -1,6 +1,6 @@
 {
   "name": "globe-sdk-leafet",
-  "version": "0.0.20",
+  "version": "0.0.23",
   "description": "",
   "keywords": [
     "leaflet",
@@ -25,7 +25,6 @@
     "leaflet.markercluster": "^1.5.3",
     "leaflet-routing-machine": "^3.2.12",
     "leaflet-sidebar-v2": "^3.2.3",
-    "@geoman-io/leaflet-geoman-free": "^2.14.2",
     "typescript": "^4.4.2",
     "tsup": "^6.5.0",
     "@changesets/cli": "^2.26.0"
