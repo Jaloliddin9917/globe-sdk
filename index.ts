@@ -8,69 +8,22 @@ import "leaflet.markercluster";
 import "leaflet.markercluster/dist/MarkerCluster.css";
 import "leaflet.markercluster/dist/MarkerCluster.Default.css";
 
-// import "@geoman-io/leaflet-geoman-free";
-// import "@geoman-io/leaflet-geoman-free/dist/leaflet-geoman.css";
+import "@geoman-io/leaflet-geoman-free";
+import "@geoman-io/leaflet-geoman-free/dist/leaflet-geoman.css";
 
 import "leaflet-routing-machine/dist/leaflet-routing-machine.css";
 import "leaflet-routing-machine";
 
-export type MapSDKOptions = {
-  map: {
-    coordinates: any;
-    defaultZoom: number;
-    onMapClick?: () => void;
-  };
-  tile: {
-    url: string;
-    attribution: string;
-  };
-  clusterMarkers?: ILayer[];
-  markers?: ILayer[];
-  lines?: ILayer[];
-  circles?: ILayer[];
-  polygons?: ILayer[];
-  routes?: ILayer[];
-};
 
-interface ILayer {
-  type: string;
-  features: [
-    {
-      type: string;
-      properties: {};
-      geometry: {
-        coordinates: [];
-        type: string;
-      };
-    }
-  ];
-}
 
-interface IOptions {
-  map: {
-    coordinates: {
-      latitude: number;
-      longitude: number;
-    };
-  };
-}
-
-interface IProject {
-  Id: string;
-  Name: string;
-}
-
-interface ILayer {
-  id: string;
-  name: string;
-  data_type: string;
-}
 
 export class MapSDK {
   private container: HTMLElement;
   private options: any;
   private map: L.Map;
   private popup: any;
+
+  private viewMarkers: MapViewMarker[] = [];
 
   private markerLayerGroup: L.LayerGroup;
   private polygonLayerGroup: L.LayerGroup;
@@ -109,9 +62,9 @@ export class MapSDK {
       showAlternatives: true,
     }).addTo(this.map);
 
-    // this.map.pm.addControls({
-    //   position: "topright",
-    // });
+    this.map.pm.addControls({
+      position: "topright",
+    });
 
     this.renderOptions()
       .then((options) => {
@@ -354,7 +307,7 @@ export class MapSDK {
         iconUrl: pin?.properties?.color_or_img
           ? pin?.properties?.color_or_img
           : "https://freesvg.org/img/ts-map-pin.png",
-        iconSize: [25, 25],
+          iconSize: [25, 25],
       });
 
       // Start the popup content
@@ -463,11 +416,11 @@ export class MapSDK {
     this.routingControl.setWaypoints([]);
   }
 
-  // onShapeCreated(callback: (shape: string, layer: L.Layer) => void): void {
-  //   this.map.on("pm:create", (event: any) => {
-  //     callback(event.shape, event.layer);
-  //   });
-  // }
+  onShapeCreated(callback: (shape: string, layer: L.Layer) => void): void {
+    this.map.on("pm:create", (event: any) => {
+      callback(event.shape, event.layer);
+    });
+  }
 
   private onMapClick(e: any) {
     this.popup
@@ -480,4 +433,387 @@ export class MapSDK {
     this.map.off();
     this.map.remove();
   }
+
+
+  // For eagleye layers
+
+  dataExists(): boolean {
+		return this.viewMarkers.length > 0;
+	}
+
+  clear(): void {
+		this.viewMarkers = [];
+
+		this.map.eachLayer((layer) => {
+			if (layer instanceof L.Marker) {
+				this.map.removeLayer(layer);
+			}
+		});
+
+		this.map.stop();
+	}
+
+  addClusterMarkers(markers: MapMarker[]): void {
+    //@ts-ignore
+		const clusterMarkers = L.markerClusterGroup();
+
+		// we create markers that we add to the layer
+		markers.forEach((clusterMarker) => {
+			// circleMarker are canvas markers
+
+			const marker = L.circleMarker({
+				lat: clusterMarker.coordinates.latitude,
+				lng: clusterMarker.coordinates.longitude,
+			});
+			clusterMarkers.bindPopup(
+				`<div><img src="${clusterMarker.icon.url}" style="width: 100px; height: 150px"></div>`,
+				{
+					minWidth: 100, // set max-width
+					keepInView: true,
+				}
+			);
+
+			clusterMarkers.addLayer(marker);
+		});
+
+		// adding markers to the map
+		this.map.addLayer(clusterMarkers);
+	}
+
+	isMarkerPresented(id: string): boolean {
+		const markerPresented = this.viewMarkers.some((marker) => marker.id === id);
+
+		return markerPresented;
+	}
+
+	addMarkers(mapMarkers: MapMarker[]): void {
+		const centerLocation: [number, number] = [0, 0];
+		const markers: L.Marker[] = [];
+
+		mapMarkers.forEach((mapMarker) => {
+			const {coordinates, popup, icon} = mapMarker;
+
+			const marker = L.marker([coordinates.latitude, coordinates.longitude], {
+				opacity: 1,
+				title: mapMarker.name,
+				draggable: !!mapMarker.draggable,
+			}).bindTooltip(mapMarker.name, {
+				permanent: true,
+				direction: 'bottom',
+				className: `${mapMarker.id}-marker-label transparent-marker-tooltip`,
+				offset: [0, 15],
+			});
+
+			if (icon) {
+				const markerIcon = L.icon({
+					iconUrl: icon.url,
+					iconSize: icon.size ? [icon.size.width, icon.size.height] : [30, 30],
+				});
+				marker.setIcon(markerIcon);
+			}
+
+			if (popup?.enabled) {
+				marker.bindPopup(popup.content, {autoClose: false});
+
+				if (popup.opened) {
+					marker.openPopup();
+				}
+			}
+
+			this.map.addLayer(marker);
+
+			const location = marker.getLatLng();
+
+			centerLocation[0] += location.lat;
+			centerLocation[1] += location.lng;
+
+			markers.push(marker);
+
+			this.viewMarkers.push({id: mapMarker.id, marker});
+		});
+
+		this.map.setView(
+			L.latLng(
+				centerLocation[0] / markers.length,
+				centerLocation[1] / markers.length
+			),
+			8
+		);
+	}
+
+	filterMarkers(visibleMarkers: MapMarker[]) {
+		this.viewMarkers.forEach((viewMarker) => {
+			const markerFound: boolean = visibleMarkers.some(
+				(visibleMarker) => viewMarker.id === visibleMarker.id
+			);
+
+			const opacity: string = markerFound ? '1' : '0';
+
+			viewMarker.marker.setOpacity(+opacity);
+
+			const lineElements = this.container.getElementsByClassName(
+				`${viewMarker.id}-event`
+			);
+			const markerLabels = this.container.getElementsByClassName(
+				`${viewMarker.id}-marker-label`
+			);
+
+			Array.from(lineElements).forEach((el: any) => {
+				el.style.opacity = opacity;
+			});
+
+			Array.from(markerLabels).forEach((el: any) => {
+				el.style.opacity = opacity;
+			});
+		});
+	}
+
+	removeMarker(id: string): void {
+		const viewMarkerIndex = this.viewMarkers.findIndex(
+			(marker) => marker.id === id
+		);
+
+		this.map.removeLayer(this.viewMarkers[viewMarkerIndex].marker);
+
+		this.viewMarkers.splice(viewMarkerIndex, 1);
+	}
+
+	addLines(lines: MapLine[]): void {
+		lines.forEach((line) => {
+			const source = this.viewMarkers.find(
+				(entityMarker) => line.sourceId === entityMarker.id
+			);
+			const target = this.viewMarkers.find(
+				(entityMarker) => line.targetId === entityMarker.id
+			);
+
+			if (source && target) {
+				const mapLine: L.Polyline = L.polyline(
+					[source.marker.getLatLng(), target.marker.getLatLng()],
+					{
+						color: '#3388ff',
+						lineCap: 'square',
+						stroke: true,
+						lineJoin: 'bevel',
+						className: `${source.id}-event`,
+					}
+				);
+
+				mapLine.addTo(this.map);
+			}
+		});
+	}
+
+	updateLine(line: MapLine): void {
+		const source = this.viewMarkers.find(
+			(entityMarker) => line.sourceId === entityMarker.id
+		);
+		const target = this.viewMarkers.find(
+			(entityMarker) => line.targetId === entityMarker.id
+		);
+
+		if (source && target) {
+			const mapLine: L.Polyline = L.polyline(
+				[source.marker.getLatLng(), target.marker.getLatLng()],
+				{
+					color: '#3388ff',
+					lineCap: 'square',
+					stroke: true,
+					lineJoin: 'bevel',
+					className: `${source.id}-event`,
+				}
+			);
+
+			mapLine.addTo(this.map);
+		}
+	}
+
+	addCircles(circles: MapCircle[]): void {
+		circles.forEach((circle) => {
+			const {coordinates, style, popup} = circle;
+
+			const mapCircle = L.circle(
+				[coordinates.latitude, coordinates.longitude],
+				{...style}
+			).addTo(this.map);
+
+			if (popup?.enabled) {
+				mapCircle.bindPopup(popup.content, {autoClose: false});
+
+				if (popup.opened) {
+					mapCircle.openPopup();
+				}
+			}
+		});
+	}
+
+	addPolygons(polygons: MapPolygon[]): void {
+		polygons.forEach((polygon) => {
+			const {coordinates, popup} = polygon;
+
+			const polygonCoordinates: L.LatLngTuple[] = coordinates.map((item) => [
+				item.latitude,
+				item.longitude,
+			]);
+
+			const mapPolygon = L.polygon([polygonCoordinates]).addTo(this.map);
+
+			if (popup?.enabled) {
+				mapPolygon.bindPopup(popup.content, {autoClose: false});
+
+				if (popup.opened) {
+					mapPolygon.openPopup();
+				}
+			}
+		});
+	}
+
+	addRoutes(routes: MapRoute[]): void {
+		const waypoints = routes.map((route) => ({
+			// name: route.name,
+			latLng: L.latLng(route.coordinates.latitude, route.coordinates.longitude),
+		}));
+
+		L.Routing.control({
+			waypoints,
+			useZoomParameter: true,
+			// routeWhileDragging: true
+		}).addTo(this.map);
+	}
+
+
+
 }
+
+
+
+// Types
+import { Marker } from "leaflet";
+
+export type IFeature = {
+	type: string;
+	properties: Record<string, any>;
+	geometry: {
+	  coordinates: [number, number];
+	  type: string;
+	};
+  }
+
+export type ILayerGeo = {
+  type: string;
+  features: [
+    {
+      type: string;
+      properties: {};
+      geometry: {
+        coordinates: [];
+        type: string;
+      };
+    }
+  ];
+};
+
+export type IOptions = {
+  map: {
+    coordinates: {
+      latitude: number;
+      longitude: number;
+    };
+  };
+};
+
+export type IProject = {
+  Id: string;
+  Name: string;
+};
+
+export type ILayer = {
+  id: string;
+  name: string;
+  data_type: string;
+};
+
+export type MapCoordinates = {
+  latitude: number;
+  longitude: number;
+};
+
+export type MapMarker = {
+  id: string;
+  name: string;
+  coordinates: MapCoordinates;
+  icon?: {
+    url: string;
+    size?: {
+      width: number;
+      height: number;
+    };
+  };
+  draggable?: boolean;
+  popup?: {
+    enabled: boolean;
+    content: string;
+    opened: boolean;
+  };
+};
+
+export type MapRoute = {
+  coordinates: MapCoordinates;
+};
+
+export type MapLine = {
+  sourceId: string;
+  targetId: string;
+};
+
+export type MapCircle = {
+  coordinates: MapCoordinates;
+  style?: {
+    color: string;
+    fillColor: string;
+    fillOpacity: number;
+    radius: number;
+  };
+  popup?: {
+    enabled: boolean;
+    content: string;
+    opened: boolean;
+  };
+};
+
+export type MapPolygon = {
+  coordinates: MapCoordinates[];
+  popup?: {
+    enabled: boolean;
+    content: string;
+    opened: boolean;
+  };
+};
+
+export type MapSDKInitOptions = {
+  container: HTMLDivElement;
+  configuration: MapSDKOptions;
+};
+
+export type MapSDKOptions = {
+  map: {
+    coordinates: MapCoordinates;
+    defaultZoom: number;
+    onMapClick?: () => void;
+  };
+  tile: {
+    url: string;
+    attribution: string;
+  };
+  clusterMarkers?: MapMarker[];
+  markers?: MapMarker[];
+  lines?: MapLine[];
+  circles?: MapCircle[];
+  polygons?: MapPolygon[];
+  routes?: MapRoute[];
+};
+
+export type MapViewMarker = {
+  id: string;
+  marker: Marker;
+};
